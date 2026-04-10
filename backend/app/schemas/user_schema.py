@@ -3,14 +3,12 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from app.models.user import UserRole
-
 
 class UserCreate(BaseModel):
     name: str
     email: str
     password: str
-    role: Optional[UserRole] = UserRole.user
+    role: Optional[str] = "user"
 
 
 class UserLogin(BaseModel):
@@ -22,7 +20,7 @@ class UserResponse(BaseModel):
     id: int
     name: str
     email: str
-    role: UserRole
+    role: str
     created_at: datetime
 
     class Config:

@@ -1,49 +1,15 @@
 ﻿from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List
 
 from app.db import get_db
+from app.dependencies import get_current_user
 from app.models.token import Token, TokenStatus
 from app.models.user import User
 from app.schemas.token_schema import TokenCreate, TokenResponse
 from app.services.token_service import create_token
-from app.utils.jwt_handler import verify_token
 
 router = APIRouter(prefix='/token', tags=['token'])
-
-
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
-    db: Session = Depends(get_db)
-) -> User:
-    """
-    Dependency to get the current authenticated user from JWT token.
-
-    Args:
-        credentials: HTTP authorization credentials.
-        db: Database session.
-
-    Returns:
-        User: The authenticated user.
-
-    Raises:
-        HTTPException: If token is invalid or user not found.
-    """
-    token = credentials.credentials
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-    user = db.query(User).filter(User.id == int(user_id)).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-
-    return user
 
 
 @router.post('/book', response_model=TokenResponse)

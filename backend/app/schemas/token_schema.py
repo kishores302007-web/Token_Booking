@@ -3,8 +3,6 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from app.models.token import TokenStatus
-
 
 class TokenCreate(BaseModel):
     user_id: int
@@ -20,7 +18,7 @@ class TokenResponse(BaseModel):
     service_id: Optional[int]
     employee_id: Optional[int]
     token_number: str
-    status: TokenStatus
+    status: str
     date: date
     time_slot: str
     created_at: datetime

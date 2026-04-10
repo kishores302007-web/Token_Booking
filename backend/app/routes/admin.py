@@ -5,11 +5,11 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 from app.db import get_db
-from app.models.user import User, UserRole
+from app.dependencies import get_current_admin
+from app.models.user import User
 from app.models.department import Department
 from app.models.service import Service
-from app.models.token import Token, TokenStatus
-from app.routes.token import get_current_user
+from app.models.token import Token
 from app.utils.password_hash import hash_password
 
 router = APIRouter(prefix='/admin', tags=['admin'])
@@ -49,27 +49,6 @@ class EmployeeUpdate(BaseModel):
     email: Optional[str] = None
 
 
-def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
-    """
-    Dependency to ensure the current user is an admin.
-
-    Args:
-        current_user: Authenticated user.
-
-    Returns:
-        User: The admin user.
-
-    Raises:
-        HTTPException: If user is not an admin.
-    """
-    if current_user.role != UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied. Admin role required."
-        )
-    return current_user
-
-
 # ==================== EMPLOYEE MANAGEMENT ====================
 
 @router.post('/employees', response_model=dict)
@@ -89,7 +68,7 @@ async def add_employee(
         name=employee_data.name,
         email=employee_data.email,
         password=hash_password(employee_data.password),
-        role=UserRole.employee
+        role="employee"
     )
     db.add(new_employee)
     db.commit()
@@ -104,7 +83,7 @@ async def get_employees(
     db: Session = Depends(get_db)
 ):
     """Get all employees."""
-    employees = db.query(User).filter(User.role == UserRole.employee).all()
+    employees = db.query(User).filter(User.role == "employee").all()
     return [
         {"id": emp.id, "name": emp.name, "email": emp.email}
         for emp in employees
@@ -121,7 +100,7 @@ async def edit_employee(
     """Edit an employee's information."""
     employee = db.query(User).filter(
         User.id == employee_id,
-        User.role == UserRole.employee
+        User.role == "employee"
     ).first()
 
     if not employee:
@@ -152,7 +131,7 @@ async def delete_employee(
     """Delete an employee."""
     employee = db.query(User).filter(
         User.id == employee_id,
-        User.role == UserRole.employee
+        User.role == "employee"
     ).first()
 
     if not employee:
@@ -338,10 +317,10 @@ async def get_reports_summary(
 ):
     """Get overall token reports (total, completed, pending)."""
     total_tokens = db.query(func.count(Token.id)).scalar()
-    completed_tokens = db.query(func.count(Token.id)).filter(Token.status == TokenStatus.completed).scalar()
-    pending_tokens = db.query(func.count(Token.id)).filter(Token.status == TokenStatus.pending).scalar()
-    active_tokens = db.query(func.count(Token.id)).filter(Token.status == TokenStatus.active).scalar()
-    cancelled_tokens = db.query(func.count(Token.id)).filter(Token.status == TokenStatus.cancelled).scalar()
+    completed_tokens = db.query(func.count(Token.id)).filter(Token.status == "completed").scalar()
+    pending_tokens = db.query(func.count(Token.id)).filter(Token.status == "pending").scalar()
+    active_tokens = db.query(func.count(Token.id)).filter(Token.status == "active").scalar()
+    cancelled_tokens = db.query(func.count(Token.id)).filter(Token.status == "cancelled").scalar()
 
     return {
         "total_tokens": total_tokens or 0,
@@ -366,15 +345,15 @@ async def get_service_report(
     total_tokens = db.query(func.count(Token.id)).filter(Token.service_id == service_id).scalar()
     completed_tokens = db.query(func.count(Token.id)).filter(
         Token.service_id == service_id,
-        Token.status == TokenStatus.completed
+        Token.status == "completed"
     ).scalar()
     pending_tokens = db.query(func.count(Token.id)).filter(
         Token.service_id == service_id,
-        Token.status == TokenStatus.pending
+        Token.status == "pending"
     ).scalar()
     active_tokens = db.query(func.count(Token.id)).filter(
         Token.service_id == service_id,
-        Token.status == TokenStatus.active
+        Token.status == "active"
     ).scalar()
 
     return {
@@ -405,15 +384,15 @@ async def get_department_report(
     total_tokens = db.query(func.count(Token.id)).filter(Token.service_id.in_(service_ids)).scalar()
     completed_tokens = db.query(func.count(Token.id)).filter(
         Token.service_id.in_(service_ids),
-        Token.status == TokenStatus.completed
+        Token.status == "completed"
     ).scalar()
     pending_tokens = db.query(func.count(Token.id)).filter(
         Token.service_id.in_(service_ids),
-        Token.status == TokenStatus.pending
+        Token.status == "pending"
     ).scalar()
     active_tokens = db.query(func.count(Token.id)).filter(
         Token.service_id.in_(service_ids),
-        Token.status == TokenStatus.active
+        Token.status == "active"
     ).scalar()
 
     return {

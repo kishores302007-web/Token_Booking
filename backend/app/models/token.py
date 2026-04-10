@@ -22,7 +22,7 @@ class Token(Base):
     service_id = Column(Integer, nullable=True)
     employee_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     token_number = Column(String(length=50), nullable=False)
-    status = Column(Enum(TokenStatus), nullable=False, default=TokenStatus.pending)
+    status = Column(Enum('pending', 'active', 'completed', 'cancelled', name='token_status'), nullable=False, default='pending')
     date = Column(Date, nullable=False)
     time_slot = Column(String(length=50), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

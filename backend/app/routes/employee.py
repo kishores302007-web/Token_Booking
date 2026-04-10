@@ -4,33 +4,12 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.db import get_db
-from app.models.token import Token, TokenStatus
-from app.models.user import User, UserRole
-from app.routes.token import get_current_user
+from app.dependencies import get_current_employee
+from app.models.token import Token
+from app.models.user import User
 from app.schemas.token_schema import TokenResponse
 
 router = APIRouter(prefix='/employee', tags=['employee'])
-
-
-def get_current_employee(current_user: User = Depends(get_current_user)) -> User:
-    """
-    Dependency to ensure the current user is an employee.
-
-    Args:
-        current_user: Authenticated user.
-
-    Returns:
-        User: The employee user.
-
-    Raises:
-        HTTPException: If user is not an employee.
-    """
-    if current_user.role != UserRole.employee:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied. Employee role required."
-        )
-    return current_user
 
 
 @router.get('/tokens/today', response_model=List[TokenResponse])
@@ -60,7 +39,7 @@ async def get_today_tokens(
 @router.put('/tokens/{token_id}/status')
 async def update_token_status(
     token_id: int,
-    new_status: TokenStatus,
+    new_status: str,
     current_employee: User = Depends(get_current_employee),
     db: Session = Depends(get_db)
 ):
@@ -85,7 +64,7 @@ async def update_token_status(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Token not found")
 
     # Validate status transitions if needed
-    if token.status == TokenStatus.completed:
+    if token.status == "completed":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot update status of completed token"
@@ -94,7 +73,7 @@ async def update_token_status(
     token.status = new_status
     db.commit()
 
-    return {"message": f"Token status updated to {new_status.value}"}
+    return {"message": f"Token status updated to {new_status}"}
 
 
 @router.put('/tokens/call-next')
@@ -117,13 +96,13 @@ async def call_next_token(
     next_token = db.query(Token).filter(
         Token.employee_id == current_employee.id,
         Token.date == today,
-        Token.status == TokenStatus.pending
+        Token.status == "pending"
     ).order_by(Token.created_at).first()
 
     if not next_token:
         return {"message": "No pending tokens available"}
 
-    next_token.status = TokenStatus.active
+    next_token.status = "active"
     db.commit()
 
     return {

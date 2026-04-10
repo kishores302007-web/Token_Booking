@@ -1,10 +1,14 @@
 ﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.db import Base, engine
 from app.routes.admin import router as admin_router
 from app.routes.auth import router as auth_router
 from app.routes.employee import router as employee_router
 from app.routes.token import router as token_router
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title='Token Booking API')
 
